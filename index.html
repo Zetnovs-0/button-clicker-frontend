@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Left vs Right - Public Vote</title>
+  <title>Left or Right</title>
   <style>
     :root {
       --bg: #090a0f;
@@ -72,7 +72,6 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 30px;
-      margin-bottom: 40px;
     }
 
     @media (max-width: 600px) {
@@ -83,7 +82,7 @@
       background: var(--card-bg);
       border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 20px;
-      padding: 30px 20px;
+      padding: 40px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -97,10 +96,10 @@
     .btn {
       width: 100%;
       max-width: 200px;
-      padding: 16px 24px;
+      padding: 18px 24px;
       border: none;
       border-radius: 12px;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       font-weight: 700;
       cursor: pointer;
       color: #fff;
@@ -122,41 +121,12 @@
       box-shadow: 0 0 20px rgba(157, 78, 221, 0.4);
     }
 
-    .counter {
-      margin-top: 20px;
-      font-size: 2rem;
-      font-weight: 800;
-    }
-
-    .label {
-      font-size: 0.85rem;
+    .status-msg {
+      margin-top: 25px;
+      font-size: 0.95rem;
       color: var(--subtext);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 4px;
-    }
-
-    .bar-container {
-      width: 100%;
-      height: 12px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      overflow: hidden;
-      display: flex;
-    }
-
-    .bar-left {
-      height: 100%;
-      background: #00c6ff;
-      width: 50%;
-      transition: width 0.3s ease;
-    }
-
-    .bar-right {
-      height: 100%;
-      background: #9d4edd;
-      width: 50%;
-      transition: width 0.3s ease;
+      height: 20px;
+      transition: opacity 0.3s ease;
     }
   </style>
 </head>
@@ -167,84 +137,56 @@
 
   <div class="container">
     <h1>Left or Right?</h1>
-    <p class="subtitle">Click any side to cast your vote directly to the live PostgreSQL database.</p>
+    <p class="subtitle">Make your choice. Clicks are recorded directly to the cloud database.</p>
 
     <div class="arena">
       <div class="card">
         <button class="btn btn-left" id="btn-left">LEFT</button>
-        <div class="counter" id="count-left">0</div>
-        <div class="label">Total Clicks</div>
       </div>
 
       <div class="card">
         <button class="btn btn-right" id="btn-right">RIGHT</button>
-        <div class="counter" id="count-right">0</div>
-        <div class="label">Total Clicks</div>
       </div>
     </div>
 
-    <div class="bar-container">
-      <div class="bar-left" id="bar-left"></div>
-      <div class="bar-right" id="bar-right"></div>
-    </div>
+    <div class="status-msg" id="status-msg"></div>
   </div>
 
   <script>
-    // Replace with your Render backend URL once deployed (e.g. "https://button-clicker-backend.onrender.com")
+    // Paste your live Render backend URL here
     const API_URL = "https://button-clicker-backend.onrender.com";
 
-    let leftCount = 0;
-    let rightCount = 0;
-
-    const countLeftEl = document.getElementById("count-left");
-    const countRightEl = document.getElementById("count-right");
-    const barLeftEl = document.getElementById("bar-left");
-    const barRightEl = document.getElementById("bar-right");
-
-    function updateUI() {
-      countLeftEl.innerText = leftCount.toLocaleString();
-      countRightEl.innerText = rightCount.toLocaleString();
-
-      const total = leftCount + rightCount;
-      if (total > 0) {
-        barLeftEl.style.width = ((leftCount / total) * 100) + "%";
-        barRightEl.style.width = ((rightCount / total) * 100) + "%";
-      }
-    }
-
-    async function fetchStats() {
-      try {
-        const res = await fetch(`${API_URL}/api/stats`);
-        const data = await res.json();
-        leftCount = data.left || 0;
-        rightCount = data.right || 0;
-        updateUI();
-      } catch (err) {
-        console.error("Failed to load statistics:", err);
-      }
-    }
+    const statusMsg = document.getElementById("status-msg");
 
     async function sendClick(buttonSide) {
-      if (buttonSide === "left") leftCount++;
-      if (buttonSide === "right") rightCount++;
-      updateUI();
+      statusMsg.innerText = `Sending ${buttonSide} vote...`;
+      statusMsg.style.opacity = "1";
 
       try {
-        await fetch(`${API_URL}/api/click`, {
+        const res = await fetch(`${API_URL}/api/click`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ button: buttonSide })
         });
+
+        if (res.ok) {
+          statusMsg.innerText = "Vote recorded!";
+        } else {
+          statusMsg.innerText = "Failed to record vote.";
+        }
       } catch (err) {
-        console.error("Failed to send click:", err);
+        console.error("Error:", err);
+        statusMsg.innerText = "Connection error.";
       }
+
+      // Hide message after 2 seconds
+      setTimeout(() => {
+        statusMsg.style.opacity = "0";
+      }, 2000);
     }
 
     document.getElementById("btn-left").addEventListener("click", () => sendClick("left"));
     document.getElementById("btn-right").addEventListener("click", () => sendClick("right"));
-
-    fetchStats();
-    setInterval(fetchStats, 3000);
   </script>
 </body>
 </html>
