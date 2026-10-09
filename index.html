@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Left vs Right - Public Vote</title>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --card-bg: #12151e;
+      --cyan: #00f2fe;
+      --purple: #9d4edd;
+      --text: #f8f9fa;
+      --subtext: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    .glow-bg {
+      position: absolute;
+      width: 350px;
+      height: 350px;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-cyan { top: 20%; left: 15%; background: var(--cyan); }
+    .glow-purple { bottom: 20%; right: 15%; background: var(--purple); }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 90%;
+      max-width: 800px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 0%, var(--subtext) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      color: var(--subtext);
+      margin-bottom: 40px;
+      font-size: 1.1rem;
+    }
+
+    .arena {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    @media (max-width: 600px) {
+      .arena { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .btn {
+      width: 100%;
+      max-width: 200px;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-left {
+      background: linear-gradient(135deg, #00c6ff, #0072ff);
+      box-shadow: 0 0 20px rgba(0, 198, 255, 0.4);
+    }
+
+    .btn-right {
+      background: linear-gradient(135deg, #7b2cbf, #9d4edd);
+      box-shadow: 0 0 20px rgba(157, 78, 221, 0.4);
+    }
+
+    .counter {
+      margin-top: 20px;
+      font-size: 2rem;
+      font-weight: 800;
+    }
+
+    .label {
+      font-size: 0.85rem;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    .bar-container {
+      width: 100%;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .bar-left {
+      height: 100%;
+      background: #00c6ff;
+      width: 50%;
+      transition: width 0.3s ease;
+    }
+
+    .bar-right {
+      height: 100%;
+      background: #9d4edd;
+      width: 50%;
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-bg glow-cyan"></div>
+  <div class="glow-bg glow-purple"></div>
+
+  <div class="container">
+    <h1>Left or Right?</h1>
+    <p class="subtitle">Click any side to cast your vote directly to the live PostgreSQL database.</p>
+
+    <div class="arena">
+      <div class="card">
+        <button class="btn btn-left" id="btn-left">LEFT</button>
+        <div class="counter" id="count-left">0</div>
+        <div class="label">Total Clicks</div>
+      </div>
+
+      <div class="card">
+        <button class="btn btn-right" id="btn-right">RIGHT</button>
+        <div class="counter" id="count-right">0</div>
+        <div class="label">Total Clicks</div>
+      </div>
+    </div>
+
+    <div class="bar-container">
+      <div class="bar-left" id="bar-left"></div>
+      <div class="bar-right" id="bar-right"></div>
+    </div>
+  </div>
+
+  <script>
+    // Replace with your Render backend URL once deployed (e.g. "https://button-clicker-backend.onrender.com")
+    const API_URL = "http://localhost:3000";
+
+    let leftCount = 0;
+    let rightCount = 0;
+
+    const countLeftEl = document.getElementById("count-left");
+    const countRightEl = document.getElementById("count-right");
+    const barLeftEl = document.getElementById("bar-left");
+    const barRightEl = document.getElementById("bar-right");
+
+    function updateUI() {
+      countLeftEl.innerText = leftCount.toLocaleString();
+      countRightEl.innerText = rightCount.toLocaleString();
+
+      const total = leftCount + rightCount;
+      if (total > 0) {
+        barLeftEl.style.width = ((leftCount / total) * 100) + "%";
+        barRightEl.style.width = ((rightCount / total) * 100) + "%";
+      }
+    }
+
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API_URL}/api/stats`);
+        const data = await res.json();
+        leftCount = data.left || 0;
+        rightCount = data.right || 0;
+        updateUI();
+      } catch (err) {
+        console.error("Failed to load statistics:", err);
+      }
+    }
+
+    async function sendClick(buttonSide) {
+      if (buttonSide === "left") leftCount++;
+      if (buttonSide === "right") rightCount++;
+      updateUI();
+
+      try {
+        await fetch(`${API_URL}/api/click`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ button: buttonSide })
+        });
+      } catch (err) {
+        console.error("Failed to send click:", err);
+      }
+    }
+
+    document.getElementById("btn-left").addEventListener("click", () => sendClick("left"));
+    document.getElementById("btn-right").addEventListener("click", () => sendClick("right"));
+
+    fetchStats();
+    setInterval(fetchStats, 3000);
+  </script>
+</body>
+</html>
